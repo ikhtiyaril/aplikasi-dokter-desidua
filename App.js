@@ -1,3 +1,6 @@
+import { registerGlobals } from '@livekit/react-native';
+registerGlobals()
+
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from "@react-navigation/native";
@@ -9,6 +12,10 @@ import HomeScreen from './Screen/HomeScreen';
 import ManageBookingOfflineScreen from './Screen/ManageBookingOfflineScreen';
 import ManageTelemedicineScreen from './Screen/ManageTelemedicineScreen';
 import VideoCallScreen from './Screen/VideoCallScreen';
+import DoctorSchedule from './components/DoctorSchedule';
+import BlockedTime from './components/BlockedTime';
+import DashboardRevenueScreen from './Screen/DashboardRevenueScreen';
+import MedicalRecordScreen from './Screen/MedicalRecordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,7 +32,11 @@ export default function App() {
 <Stack.Screen name="Home" component={HomeScreen}/>
 <Stack.Screen name="Booking-Offline" component={ManageBookingOfflineScreen}/>
 <Stack.Screen name="Booking-Telemedicine" component={ManageTelemedicineScreen}/>
-
+<Stack.Screen name="Doctor-Schedule" component={DoctorSchedule}/>
+<Stack.Screen name="Blocked-Time" component={BlockedTime}/>
+<Stack.Screen name="Dashboard-Revenue" component={DashboardRevenueScreen}/>
+<Stack.Screen name="Medical-Record" component={MedicalRecordScreen}/>
+<Stack.Screen name="Video-Call" component={VideoCallScreen}/>
 
 
 
