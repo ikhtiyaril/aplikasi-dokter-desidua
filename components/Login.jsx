@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image
 } from "react-native";
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -94,7 +95,10 @@ export default function Login() {
           {/* HEADER WITH MEDICAL ICON */}
           <View className="items-center mb-8">
             <View className="w-24 h-24 bg-blue-600 rounded-3xl items-center justify-center mb-4 shadow-lg">
-              <Text className="text-5xl">🏥</Text>
+<Image
+  source={require('../assets/Desi-Dua-Putih.png')}
+  className="w-20 h-20"
+/>
             </View>
             <Text className="text-3xl font-bold text-gray-900">Desidua</Text>
             <Text className="text-base text-gray-500 mt-2">Portal Dokter</Text>
@@ -181,27 +185,7 @@ export default function Login() {
               <View className="flex-1 h-px bg-gray-200" />
               <Text className="text-gray-400 text-sm mx-4">atau</Text>
               <View className="flex-1 h-px bg-gray-200" />
-            </View>
-
-            {/* GOOGLE LOGIN */}
-            <TouchableOpacity
-              onPress={handleGoogleLogin}
-              className="bg-white border-2 border-gray-200 rounded-xl p-4 flex-row items-center justify-center"
-              activeOpacity={0.7}
-            >
-              <Text className="text-xl mr-2">🔐</Text>
-              <Text className="text-gray-700 font-semibold">
-                Masuk dengan Google
-              </Text>
-            </TouchableOpacity>
-
-            {/* REGISTER LINK */}
-            <View className="flex-row justify-center mt-6">
-              <Text className="text-gray-600">Belum punya akun? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-                <Text className="text-blue-600 font-semibold">Daftar di sini</Text>
-              </TouchableOpacity>
-            </View>
+            </View>    
           </View>
 
           {/* FOOTER */}

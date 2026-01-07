@@ -64,6 +64,7 @@ export default function BookingOn() {
       setLoading(true);
       const token = await AsyncStorage.getItem('authToken');
       console.log(token);
+      console.log(`${API_URL}/api/booking/doctor`)
       const res = await axios.get(`${API_URL}/api/booking/doctor`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -101,62 +102,148 @@ export default function BookingOn() {
     }
   };
 
-  const renderActions = (item) => {
-    switch (item.status) {
-      case "pending":
-        return (
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => updateStatus(item.id, "confirmed")}
-              className="flex-1 bg-blue-600 px-4 py-3 rounded-xl"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-sm font-semibold text-center">✓ Konfirmasi</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => updateStatus(item.id, "cancelled")}
-              className="flex-1 bg-red-600 px-4 py-3 rounded-xl"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-sm font-semibold text-center">✕ Batalkan</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      case "confirmed":
-        return (
+ const renderActions = (item) => {
+  const isPaid = item.payment_status === "paid";
+
+  switch (item.status) {
+    case "pending":
+      return (
+        <View className="flex-row gap-2">
+          {/* KONFIRMASI */}
           <TouchableOpacity
-            onPress={() => updateStatus(item.id, "completed")}
-            className="bg-blue-600 px-4 py-3 rounded-xl"
+            onPress={() => {
+              if (!isPaid) {
+                Alert.alert(
+                  "Pembayaran Belum Lunas",
+                  "Booking tidak bisa dikonfirmasi sebelum pembayaran lunas."
+                );
+                return;
+              }
+              updateStatus(item.id, "confirmed");
+            }}
+            disabled={!isPaid}
+            className={`flex-1 px-4 py-3 rounded-xl ${
+              isPaid ? "bg-blue-600" : "bg-gray-300"
+            }`}
+            activeOpacity={isPaid ? 0.8 : 1}
+          >
+            <Text
+              className={`text-sm font-semibold text-center ${
+                isPaid ? "text-white" : "text-gray-500"
+              }`}
+            >
+              ✓ Konfirmasi
+            </Text>
+          </TouchableOpacity>
+
+          {/* BATALKAN (tetap boleh) */}
+          <TouchableOpacity
+            onPress={() => updateStatus(item.id, "cancelled")}
+            className="flex-1 bg-red-600 px-4 py-3 rounded-xl"
             activeOpacity={0.8}
           >
-            <Text className="text-white text-sm font-semibold text-center">✔ Selesaikan</Text>
+            <Text className="text-white text-sm font-semibold text-center">
+              ✕ Batalkan
+            </Text>
           </TouchableOpacity>
-        );
-      case "cancelled":
-        return (
-          <TouchableOpacity
-            onPress={() => updateStatus(item.id, "pending")}
-            className="bg-yellow-600 px-4 py-3 rounded-xl"
-            activeOpacity={0.8}
+        </View>
+      );
+
+    case "confirmed":
+      return (
+        <TouchableOpacity
+          onPress={() => {
+            if (!isPaid) {
+              Alert.alert(
+                "Pembayaran Belum Lunas",
+                "Booking tidak bisa diselesaikan sebelum pembayaran lunas."
+              );
+              return;
+            }
+            updateStatus(item.id, "completed");
+          }}
+          disabled={!isPaid}
+          className={`px-4 py-3 rounded-xl ${
+            isPaid ? "bg-blue-600" : "bg-gray-300"
+          }`}
+          activeOpacity={isPaid ? 0.8 : 1}
+        >
+          <Text
+            className={`text-sm font-semibold text-center ${
+              isPaid ? "text-white" : "text-gray-500"
+            }`}
           >
-            <Text className="text-white text-sm font-semibold text-center">↻ Aktifkan Kembali</Text>
-          </TouchableOpacity>
-        );
-      default:
-        return null;
-    }
-  };
+            ✔ Selesaikan
+          </Text>
+        </TouchableOpacity>
+      );
+
+    case "cancelled":
+      return (
+        <TouchableOpacity
+          onPress={() => updateStatus(item.id, "pending")}
+          className="bg-yellow-600 px-4 py-3 rounded-xl"
+          activeOpacity={0.8}
+        >
+          <Text className="text-white text-sm font-semibold text-center">
+            ↻ Aktifkan Kembali
+          </Text>
+        </TouchableOpacity>
+      );
+
+    default:
+      return null;
+  }
+};
 
   const handleCall = async (booking_id) => {
+  try {
+    console.log("Handle call triggered, booking_id:", booking_id);
+
     const token = await AsyncStorage.getItem('authToken');
-    const res = await axios.get(`${API_URL}/api/call/${booking_id}`, {
+    console.log("Auth token:", token);
+
+    const url = `${API_URL}/api/call/${booking_id}`;
+    console.log("Request URL:", url);
+
+    const config = {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+        Authorization: `Bearer ${token}`,
+      },
+      timeout: 15000 // 15 detik
+    };
+    console.log("Axios config:", config);
+
+    const res = await axios.get(url, config);
+    console.log("Response data:", res.data);
+
+    if (!res.data.token) {
+      console.warn("TokenRoom tidak ditemukan di response:", res.data);
+      Alert.alert("Error", "Token room tidak tersedia");
+      return;
+    }
+
     const tokenRoom = res.data.token;
+    console.log("TokenRoom:", tokenRoom);
+
     navigation.navigate('Video-Call', { tokenRoom });
-  };
+
+  } catch (err) {
+    console.error("Gagal fetch call token:", err);
+
+    // Debug Axios lebih rinci
+    if (err.response) {
+      console.log("Server responded with error:", err.response.status, err.response.data);
+    } else if (err.request) {
+      console.log("Request sent but no response received:", err.request);
+    } else {
+      console.log("Axios setup error:", err.message);
+    }
+
+    Alert.alert("Error", "Gagal memulai panggilan");
+  }
+};
+
 
   return (
     <View className="flex-1 bg-gray-50">

@@ -59,28 +59,52 @@ export default function BookingOn() {
     },
   };
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('authToken');
-      console.log(token);
-      const res = await axios.get(`${API_URL}/api/booking/doctor`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      console.log(res.data.data);
-      const responses = res.data.data;
-      const dataFilter = responses.filter(s => (s.Service.is_live === false));
-      setData(dataFilter);
-    } catch (err) {
-      console.error("Gagal fetch booking:", err);
-      Alert.alert("Error", "Gagal memuat data booking");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    const fetchData = async () => {
+  try {
+    setLoading(true);
+    const token = await AsyncStorage.getItem('authToken');
+    console.log("Token yang digunakan:", token);
+
+    const url = `${API_URL}/api/booking/doctor`;
+    console.log("Request URL:", url);
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      timeout: 10000 // 10 detik
+    };
+    console.log("Request config:", config);
+
+    const res = await axios.get(url, config);
+    console.log("Response data:", res.data);
+
+    const responses = res.data.data;
+    const dataFilter = responses.filter(s => s.Service.is_live===false);
+    console.log("Filtered data:", dataFilter);
+
+    setData(dataFilter);
+
+  } catch (err) {
+    // Debug lengkap error Axios
+    if (err.response) {
+      // Server merespon tapi status code error
+      console.error("Server responded with error:", err.response.status, err.response.data);
+    } else if (err.request) {
+      // Request dikirim tapi tidak ada response
+      console.error("Request sent but no response received:", err.request);
+    } else {
+      // Error setting up request
+      console.error("Axios setup error:", err.message);
     }
-  };
+
+    Alert.alert("Error", "Gagal memuat data booking");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
+
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -102,50 +126,99 @@ export default function BookingOn() {
   };
 
   const renderActions = (item) => {
-    switch (item.status) {
-      case "pending":
-        return (
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => updateStatus(item.id, "confirmed")}
-              className="flex-1 bg-blue-600 px-4 py-3 rounded-xl"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-sm font-semibold text-center">✓ Konfirmasi</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => updateStatus(item.id, "cancelled")}
-              className="flex-1 bg-red-600 px-4 py-3 rounded-xl"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-sm font-semibold text-center">✕ Batalkan</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      case "confirmed":
-        return (
+  const isPaid = item.payment_status === "paid";
+
+  switch (item.status) {
+    case "pending":
+      return (
+        <View className="flex-row gap-2">
+          {/* KONFIRMASI */}
           <TouchableOpacity
-            onPress={() => updateStatus(item.id, "completed")}
-            className="bg-blue-600 px-4 py-3 rounded-xl"
+            onPress={() => {
+              if (!isPaid) {
+                Alert.alert(
+                  "Pembayaran Belum Lunas",
+                  "Booking tidak bisa dikonfirmasi sebelum pembayaran lunas."
+                );
+                return;
+              }
+              updateStatus(item.id, "confirmed");
+            }}
+            disabled={!isPaid}
+            className={`flex-1 px-4 py-3 rounded-xl ${
+              isPaid ? "bg-blue-600" : "bg-gray-300"
+            }`}
+            activeOpacity={isPaid ? 0.8 : 1}
+          >
+            <Text
+              className={`text-sm font-semibold text-center ${
+                isPaid ? "text-white" : "text-gray-500"
+              }`}
+            >
+              ✓ Konfirmasi
+            </Text>
+          </TouchableOpacity>
+
+          {/* BATALKAN (tetap boleh) */}
+          <TouchableOpacity
+            onPress={() => updateStatus(item.id, "cancelled")}
+            className="flex-1 bg-red-600 px-4 py-3 rounded-xl"
             activeOpacity={0.8}
           >
-            <Text className="text-white text-sm font-semibold text-center">✔ Selesaikan</Text>
+            <Text className="text-white text-sm font-semibold text-center">
+              ✕ Batalkan
+            </Text>
           </TouchableOpacity>
-        );
-      case "cancelled":
-        return (
-          <TouchableOpacity
-            onPress={() => updateStatus(item.id, "pending")}
-            className="bg-yellow-600 px-4 py-3 rounded-xl"
-            activeOpacity={0.8}
+        </View>
+      );
+
+    case "confirmed":
+      return (
+        <TouchableOpacity
+          onPress={() => {
+            if (!isPaid) {
+              Alert.alert(
+                "Pembayaran Belum Lunas",
+                "Booking tidak bisa diselesaikan sebelum pembayaran lunas."
+              );
+              return;
+            }
+            updateStatus(item.id, "completed");
+          }}
+          disabled={!isPaid}
+          className={`px-4 py-3 rounded-xl ${
+            isPaid ? "bg-blue-600" : "bg-gray-300"
+          }`}
+          activeOpacity={isPaid ? 0.8 : 1}
+        >
+          <Text
+            className={`text-sm font-semibold text-center ${
+              isPaid ? "text-white" : "text-gray-500"
+            }`}
           >
-            <Text className="text-white text-sm font-semibold text-center">↻ Aktifkan Kembali</Text>
-          </TouchableOpacity>
-        );
-      default:
-        return null;
-    }
-  };
+            ✔ Selesaikan
+          </Text>
+        </TouchableOpacity>
+      );
+
+    case "cancelled":
+      return (
+        <TouchableOpacity
+          onPress={() => updateStatus(item.id, "pending")}
+          className="bg-yellow-600 px-4 py-3 rounded-xl"
+          activeOpacity={0.8}
+        >
+          <Text className="text-white text-sm font-semibold text-center">
+            ↻ Aktifkan Kembali
+          </Text>
+        </TouchableOpacity>
+      );
+
+    default:
+      return null;
+  }
+};
+
 
   const handleCall = async (booking_id) => {
     const token = await AsyncStorage.getItem('authToken');
@@ -243,18 +316,7 @@ export default function BookingOn() {
                   </View>
                 </View>
 
-                {/* VIDEO CALL BUTTON */}
-                {item.status === 'confirmed' && (
-                  <TouchableOpacity
-                    className="bg-blue-600 px-4 py-3 rounded-xl mb-3 flex-row items-center justify-center"
-                    onPress={() => handleCall(item.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text className="text-2xl mr-2">📹</Text>
-                    <Text className="text-white text-sm font-bold">Mulai Video Call</Text>
-                  </TouchableOpacity>
-                )}
-
+              
                 {/* ACTION BUTTONS */}
                 {renderActions(item)}
               </View>

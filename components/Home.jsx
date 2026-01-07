@@ -1,49 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  ScrollView, 
+  Switch, 
+  Image, 
+  ActivityIndicator 
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from 'axios';
 import { API_URL } from '@env';
-
+import {
+  Calendar,
+  Video,
+  Wallet,
+  ClipboardList,
+  CalendarClock,
+  Clock,
+  Users,
+  AlertCircle,
+  Settings,
+  LogOut,
+  ChevronRight,
+} from 'lucide-react-native';
 
 export default function Home() {
   const navigation = useNavigation();
   const [doctorInfo, setDoctorInfo] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [booking,setBooking] = useState([]);
+  const [booking, setBooking] = useState([]);
 
+  useEffect(() => {
+    const loginCheck = async () => {
+      const token = await AsyncStorage.getItem('authToken');
+      console.log('INI TOKENNYA');
+      console.log(token);
+      if (!token) {
+        navigation.navigate('Login');
+      }
+    };
+    loginCheck();
+  }, []);
 
-  useEffect(()=>{
-    const loginCheck = async ()=>{
-  const token = await AsyncStorage.getItem('authToken')
-  console.log('INI TOKENNYA')
-  console.log(token)
-  if(!token){
-    navigation.navigate('Login')
-  }
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('authToken');
+      navigation.replace('Login');
+    } catch (error) {
+      console.log('Logout error:', error);
     }
-    loginCheck()
-
-  },[])
-
-const handleLogout = async () => {
-  try {
-    await AsyncStorage.removeItem('authToken');
-    navigation.replace('Login');
-  } catch (error) {
-    console.log('Logout error:', error);
-  }
-};
-
+  };
 
   const menuItems = [
-    { title: 'Daftar Booking Offline', screen: 'Booking-Offline', icon: '📋' },
-    { title: 'Daftar Layanan Video Call', screen: 'Booking-Telemedicine', icon: '📹' },
-    { title: 'Dashboard Penghasilan', screen: 'Dashboard-Revenue', icon: '💰' },
-    { title: 'Daftar Riwayat Pasien', screen: 'Medical-Record', icon: '📊' },
-    { title: 'Schedule Dokter', screen: 'Doctor-Schedule', icon: '📅' },
-    { title: 'Block Waktu', screen: 'Blocked-Time', icon: '🔒' },
+    { 
+      title: 'Daftar Booking Offline', 
+      screen: 'Booking-Offline', 
+      icon: ClipboardList,
+      color: '#3b82f6',
+      bgColor: '#dbeafe'
+    },
+    { 
+      title: 'Daftar Layanan Video Call', 
+      screen: 'Booking-Telemedicine', 
+      icon: Video,
+      color: '#8b5cf6',
+      bgColor: '#ede9fe'
+    },
+    { 
+      title: 'Dashboard Penghasilan', 
+      screen: 'Dashboard-Revenue', 
+      icon: Wallet,
+      color: '#10b981',
+      bgColor: '#d1fae5'
+    },
+    { 
+      title: 'Daftar Riwayat Pasien', 
+      screen: 'Medical-Record', 
+      icon: Users,
+      color: '#f59e0b',
+      bgColor: '#fef3c7'
+    },
+    { 
+      title: 'Schedule Dokter', 
+      screen: 'Doctor-Schedule', 
+      icon: Calendar,
+      color: '#ef4444',
+      bgColor: '#fee2e2'
+    },
+    { 
+      title: 'Block Waktu', 
+      screen: 'Blocked-Time', 
+      icon: Clock,
+      color: '#6b7280',
+      bgColor: '#f3f4f6'
+    },
   ];
 
   /* ================= FETCH DOCTOR ================= */
@@ -56,11 +109,11 @@ const handleLogout = async () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      console.log("===DATA RES DOCTOR===")
-console.log(res.data)
+      console.log("===DATA RES DOCTOR===");
+      console.log(res.data);
 
       setDoctorInfo(res.data.data);
-      setBooking(res.data.data.Bookings)
+      setBooking(res.data.data.Bookings);
       setIsActive(res.data.data.isActive);
     } catch (error) {
       console.log('Fetch doctor error:', error);
@@ -91,112 +144,132 @@ console.log(res.data)
       console.log('Update status error:', error);
     }
   };
-  
-const normalizeImageUrl = (url) => {
-  if (!url) return null;
 
-  if (url.includes('localhost')) {
-    return url.replace(
-      /http:\/\/localhost:\d+/,
-      API_URL
-    );
-  }
+  const normalizeImageUrl = (url) => {
+    if (!url) return null;
 
-  return url;
-};
-
-
-  useEffect(() => {
-  const init = async () => {
-    const token = await AsyncStorage.getItem("authToken");
-
-    if (!token) {
-      setLoading(false);
-      navigation.replace("Login");
-      return;
+    if (url.includes('localhost')) {
+      return url.replace(/http:\/\/localhost:\d+/, API_URL);
     }
 
-    await fetchDoctorInfo();
+    return url;
   };
 
-  init();
-}, [navigation]);
+  useEffect(() => {
+    const init = async () => {
+      const token = await AsyncStorage.getItem("authToken");
 
-const getTodayDate = () => {
-  const today = new Date();
-  return today.toISOString().split('T')[0]; // YYYY-MM-DD
-};
+      if (!token) {
+        setLoading(false);
+        navigation.replace("Login");
+        return;
+      }
 
+      await fetchDoctorInfo();
+    };
 
+    init();
+  }, [navigation]);
 
-const pendingBook = (bookings = []) => {
-  return bookings.filter(b => b.status === 'pending').length;
-};
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD
+  };
 
-const todayPatients = (bookings = []) => {
-  const today = getTodayDate();
+  const pendingBook = (bookings = []) => {
+    return bookings.filter(b => b.status === 'pending').length;
+  };
 
-  return bookings.filter(b => {
-    // asumsi b.date format: YYYY-MM-DD
-    return b.date === today && b.status !== 'cancelled';
-  }).length;
-};
+  const todayPatients = (bookings = []) => {
+    const today = getTodayDate();
+
+    return bookings.filter(b => {
+      return b.date === today && b.status !== 'cancelled';
+    }).length;
+  };
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-blue-50">
         <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <ScrollView className="flex-1 bg-blue-50">
 
       {/* HEADER */}
-      <View className="bg-blue-600 px-6 pt-12 pb-8">
-        <Text className="text-white text-sm opacity-90">Dashboard</Text>
-        <Text className="text-white text-3xl font-bold mt-1">Selamat Datang</Text>
+      <View className="bg-blue-600 px-6 pt-12 pb-20 rounded-b-3xl">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-1">
+            <Text className="text-blue-100 text-sm font-medium">Dashboard</Text>
+            <Text className="text-white text-3xl font-bold mt-1">
+              Selamat Datang
+            </Text>
+          </View>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Settings')}
+            className="bg-blue-500 p-3 rounded-2xl"
+          >
+            <Settings size={24} color="#ffffff" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* PROFILE CARD */}
-      <View className="mx-6 -mt-6 bg-white rounded-2xl shadow-lg p-5">
+      <View className="mx-6 -mt-12 bg-white rounded-3xl p-6 border border-blue-100">
         <View className="flex-row items-center">
 
           {/* AVATAR */}
-          <View className="relative">
-            <Image
-              source={{
-                uri: normalizeImageUrl(doctorInfo?.avatar) || 'https://i.pravatar.cc/150',
-              }}
-              className="w-16 h-16 rounded-full"
-            />
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Settings')} 
+            className="relative"
+          >
+            <View className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-blue-100">
+              <Image
+                source={{
+                  uri: normalizeImageUrl(doctorInfo?.avatar) || 'https://i.pravatar.cc/150',
+                }}
+                className="w-full h-full"
+              />
+            </View>
             <View
-              className={`absolute bottom-0 right-0 w-4 h-4 ${
+              className={`absolute -bottom-1 -right-1 w-6 h-6 ${
                 isActive ? 'bg-green-500' : 'bg-gray-400'
-              } rounded-full border-2 border-white`}
-            />
-          </View>
+              } rounded-full border-3 border-white items-center justify-center`}
+            >
+              <View className="w-2 h-2 bg-white rounded-full" />
+            </View>
+          </TouchableOpacity>
 
           {/* INFO */}
-          <View className="flex-1 ml-4">
+          <TouchableOpacity 
+            className="flex-1 ml-4" 
+            onPress={() => navigation.navigate('Settings')}
+          >
             <Text className="text-gray-900 text-lg font-bold">
               {doctorInfo?.name || 'Dokter'}
             </Text>
-            <Text className="text-gray-500 text-sm">
-              {doctorInfo?.specialist || 'Spesialis'}
+            <Text className="text-blue-600 text-sm font-medium mt-1">
+              {doctorInfo?.specialization || 'Spesialis'}
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          {/* STATUS */}
+          {/* STATUS TOGGLE */}
           <View className="items-end">
-            <Text
-              className={`text-xs font-semibold mb-1 ${
-                isActive ? 'text-green-600' : 'text-gray-500'
-              }`}
-            >
-              {isActive ? 'Aktif' : 'Nonaktif'}
-            </Text>
+            <View className="flex-row items-center mb-2">
+              <View className={`w-2 h-2 rounded-full mr-2 ${
+                isActive ? 'bg-green-500' : 'bg-gray-400'
+              }`} />
+              <Text
+                className={`text-xs font-bold ${
+                  isActive ? 'text-green-600' : 'text-gray-500'
+                }`}
+              >
+                {isActive ? 'AKTIF' : 'NONAKTIF'}
+              </Text>
+            </View>
             <Switch
               value={isActive}
               onValueChange={handleStatusToggle}
@@ -205,59 +278,90 @@ const todayPatients = (bookings = []) => {
             />
           </View>
         </View>
-        
       </View>
 
       {/* STATS */}
       <View className="flex-row mx-6 mt-6 gap-3">
-        <View className="flex-1 bg-white rounded-xl p-4 shadow-sm">
-          <Text className="text-gray-500 text-xs">Pasien Hari Ini</Text>
-<Text className="text-gray-900 text-2xl font-bold">
-  {todayPatients(booking)}
-</Text>
+        {/* PASIEN HARI INI */}
+        <View className="flex-1 bg-white rounded-2xl p-5 border border-blue-100">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="bg-blue-100 p-2 rounded-xl">
+              <Users size={20} color="#2563eb" strokeWidth={2} />
+            </View>
+          </View>
+          <Text className="text-gray-500 text-xs font-medium mb-1">
+            Pasien Hari Ini
+          </Text>
+          <Text className="text-gray-900 text-3xl font-bold">
+            {todayPatients(booking)}
+          </Text>
         </View>
-        <View className="flex-1 bg-white rounded-xl p-4 shadow-sm">
-          <Text className="text-gray-500 text-xs">Pending</Text>
-          <Text className="text-blue-600 text-2xl font-bold">{pendingBook(booking)}</Text>
+
+        {/* PENDING */}
+        <View className="flex-1 bg-white rounded-2xl p-5 border border-blue-100">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="bg-amber-100 p-2 rounded-xl">
+              <AlertCircle size={20} color="#f59e0b" strokeWidth={2} />
+            </View>
+          </View>
+          <Text className="text-gray-500 text-xs font-medium mb-1">
+            Menunggu
+          </Text>
+          <Text className="text-amber-600 text-3xl font-bold">
+            {pendingBook(booking)}
+          </Text>
         </View>
       </View>
 
       {/* MENU */}
-      <View className="mx-6 mt-6">
-        <Text className="text-gray-900 text-base font-bold mb-3">
-          Menu Utama
-        </Text>
+      <View className="mx-6 mt-8">
+        <View className="flex-row items-center justify-between mb-4">
+          <Text className="text-gray-900 text-lg font-bold">
+            Menu Utama
+          </Text>
+          <View className="bg-blue-100 px-3 py-1 rounded-full">
+            <Text className="text-blue-600 text-xs font-semibold">
+              {menuItems.length} Menu
+            </Text>
+          </View>
+        </View>
 
         {menuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
-            className="bg-white rounded-xl mb-3 shadow-sm flex-row items-center p-4"
+            className="bg-white rounded-2xl mb-3 flex-row items-center p-4 border border-blue-100"
             onPress={() => navigation.navigate(item.screen)}
+            activeOpacity={0.7}
           >
-            <View className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center">
-              <Text className="text-lg">{item.icon}</Text>
+            <View 
+              className="w-12 h-12 rounded-xl items-center justify-center"
+              style={{ backgroundColor: item.bgColor }}
+            >
+              <item.icon size={24} color={item.color} strokeWidth={2} />
             </View>
 
-            <Text className="flex-1 text-gray-900 font-semibold ml-4">
+            <Text className="flex-1 text-gray-900 font-semibold ml-4 text-base">
               {item.title}
             </Text>
 
-            <Text className="text-gray-400 text-xl">›</Text>
+            <ChevronRight size={20} color="#9ca3af" strokeWidth={2} />
           </TouchableOpacity>
         ))}
       </View>
 
-      <View className="h-8" />
-      <View className="mx-6 mt-6">
-  <TouchableOpacity
-    onPress={handleLogout}
-    className="bg-white border border-red-200 rounded-xl p-4 m-10 items-center"
-  >
-    <Text className="text-red-500 font-semibold">
-      Keluar Akun
-    </Text>
-  </TouchableOpacity>
-</View>
+      {/* LOGOUT */}
+      <View className="mx-6 mt-4 mb-8">
+        <TouchableOpacity
+          onPress={handleLogout}
+          className="bg-white border-2 border-red-200 rounded-2xl p-4 flex-row items-center justify-center"
+          activeOpacity={0.7}
+        >
+          <LogOut size={20} color="#ef4444" strokeWidth={2} />
+          <Text className="text-red-500 font-bold ml-2 text-base">
+            Keluar Akun
+          </Text>
+        </TouchableOpacity>
+      </View>
 
     </ScrollView>
   );

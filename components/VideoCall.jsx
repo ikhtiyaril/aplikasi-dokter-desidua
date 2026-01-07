@@ -12,6 +12,8 @@ import {
   Modal,
 } from 'react-native';
 
+import { WS_URL } from '@env'
+
 import { Room, Track, RoomEvent } from 'livekit-client';
 import {
   LiveKitRoom,
@@ -24,7 +26,6 @@ import {
 } from '@livekit/react-native';
 import ScreenWrapper from './ScreenWrapper';
 
-const WS_URL = 'ws://192.168.0.101:7880';
 const { width, height } = Dimensions.get('window');
 
 export default function VideoCall({ route }) {

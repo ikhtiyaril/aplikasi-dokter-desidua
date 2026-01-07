@@ -16,6 +16,8 @@ import DoctorSchedule from './components/DoctorSchedule';
 import BlockedTime from './components/BlockedTime';
 import DashboardRevenueScreen from './Screen/DashboardRevenueScreen';
 import MedicalRecordScreen from './Screen/MedicalRecordScreen';
+import GeneralScreen from './Screen/GeneralScreen';
+import ResetPasswordScreen from './Screen/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +39,10 @@ export default function App() {
 <Stack.Screen name="Dashboard-Revenue" component={DashboardRevenueScreen}/>
 <Stack.Screen name="Medical-Record" component={MedicalRecordScreen}/>
 <Stack.Screen name="Video-Call" component={VideoCallScreen}/>
+<Stack.Screen name="Reset-Password" component={ResetPasswordScreen}/>
+<Stack.Screen name="Settings" component={GeneralScreen}/>
+
+
 
 
 
