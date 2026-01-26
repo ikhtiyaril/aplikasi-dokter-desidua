@@ -1,9 +1,26 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, RefreshControl } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, RefreshControl, ActivityIndicator, StatusBar } from "react-native";
 import axios from "axios";
 import { API_URL } from "@env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+// Import Lucide Icons
+import { 
+  Clock, 
+  CheckCircle2, 
+  XCircle, 
+  Check, 
+  CreditCard, 
+  AlertCircle, 
+  User, 
+  Stethoscope, 
+  ClipboardCheck,
+  Calendar,
+  Hash,
+  RotateCcw,
+  Search,
+  ChevronRight
+} from "lucide-react-native";
 
 export default function BookingOn() {
   const navigation = useNavigation();
@@ -11,34 +28,35 @@ export default function BookingOn() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Status Config dengan Icons
   const statusConfig = {
     pending: { 
-      bg: "bg-yellow-50", 
-      text: "text-yellow-700", 
-      border: "border-yellow-200",
+      bg: "bg-amber-50", 
+      text: "text-amber-700", 
+      border: "border-amber-200",
       label: "Menunggu",
-      emoji: "⏳"
+      icon: <Clock size={14} color="#b45309" />
     },
     confirmed: { 
-      bg: "bg-green-50", 
-      text: "text-green-700", 
-      border: "border-green-200",
+      bg: "bg-emerald-50", 
+      text: "text-emerald-700", 
+      border: "border-emerald-200",
       label: "Terkonfirmasi",
-      emoji: "✅"
+      icon: <CheckCircle2 size={14} color="#047857" />
     },
     cancelled: { 
-      bg: "bg-red-50", 
-      text: "text-red-700", 
-      border: "border-red-200",
+      bg: "bg-rose-50", 
+      text: "text-rose-700", 
+      border: "border-rose-200",
       label: "Dibatalkan",
-      emoji: "❌"
+      icon: <XCircle size={14} color="#be123c" />
     },
     completed: { 
       bg: "bg-blue-50", 
       text: "text-blue-700", 
       border: "border-blue-200",
       label: "Selesai",
-      emoji: "✔️"
+      icon: <ClipboardCheck size={14} color="#1d4ed8" />
     },
   };
 
@@ -48,63 +66,36 @@ export default function BookingOn() {
       text: "text-green-700", 
       border: "border-green-200",
       label: "Lunas",
-      emoji: "💰"
+      icon: <CreditCard size={14} color="#15803d" />
     },
     unpaid: { 
       bg: "bg-orange-50", 
       text: "text-orange-700", 
       border: "border-orange-200",
       label: "Belum Bayar",
-      emoji: "⏱️"
+      icon: <AlertCircle size={14} color="#c2410c" />
     },
   };
 
-    const fetchData = async () => {
-  try {
-    setLoading(true);
-    const token = await AsyncStorage.getItem('authToken');
-    console.log("Token yang digunakan:", token);
-
-    const url = `${API_URL}/api/booking/doctor`;
-    console.log("Request URL:", url);
-
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      timeout: 10000 // 10 detik
-    };
-    console.log("Request config:", config);
-
-    const res = await axios.get(url, config);
-    console.log("Response data:", res.data);
-
-    const responses = res.data.data;
-    const dataFilter = responses.filter(s => s.Service.is_live===false);
-    console.log("Filtered data:", dataFilter);
-
-    setData(dataFilter);
-
-  } catch (err) {
-    // Debug lengkap error Axios
-    if (err.response) {
-      // Server merespon tapi status code error
-      console.error("Server responded with error:", err.response.status, err.response.data);
-    } else if (err.request) {
-      // Request dikirim tapi tidak ada response
-      console.error("Request sent but no response received:", err.request);
-    } else {
-      // Error setting up request
-      console.error("Axios setup error:", err.message);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('authToken');
+      const res = await axios.get(`${API_URL}/api/booking/doctor`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000
+      });
+      const responses = res.data.data;
+      const dataFilter = responses.filter(s => s.Service.is_live === false);
+      setData(dataFilter);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Gagal memuat data booking");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    Alert.alert("Error", "Gagal memuat data booking");
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-};
-
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -120,149 +111,116 @@ export default function BookingOn() {
       await axios.patch(`${API_URL}/api/booking/${id}/status`, { status: newStatus });
       fetchData();
     } catch (err) {
-      console.error("Gagal update status:", err);
       Alert.alert("Error", "Gagal mengubah status booking");
     }
   };
 
   const renderActions = (item) => {
-  const isPaid = item.payment_status === "paid";
+    const isPaid = item.payment_status === "paid";
 
-  switch (item.status) {
-    case "pending":
-      return (
-        <View className="flex-row gap-2">
-          {/* KONFIRMASI */}
+    switch (item.status) {
+      case "pending":
+        return (
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              onPress={() => {
+                if (!isPaid) {
+                  Alert.alert("Pembayaran Belum Lunas", "Booking tidak bisa dikonfirmasi sebelum pembayaran lunas.");
+                  return;
+                }
+                updateStatus(item.id, "confirmed");
+              }}
+              disabled={!isPaid}
+              className={`flex-1 flex-row items-center justify-center py-3.5 rounded-2xl shadow-sm ${isPaid ? "bg-blue-600" : "bg-slate-200"}`}
+            >
+              <Check size={18} color={isPaid ? "white" : "#94a3b8"} />
+              <Text className={`font-bold ml-2 ${isPaid ? "text-white" : "text-slate-400"}`}>Konfirmasi</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => updateStatus(item.id, "cancelled")}
+              className="flex-1 flex-row items-center justify-center bg-rose-50 border border-rose-100 py-3.5 rounded-2xl"
+            >
+              <XCircle size={18} color="#e11d48" />
+              <Text className="text-rose-600 font-bold ml-2">Batalkan</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      case "confirmed":
+        return (
           <TouchableOpacity
             onPress={() => {
               if (!isPaid) {
-                Alert.alert(
-                  "Pembayaran Belum Lunas",
-                  "Booking tidak bisa dikonfirmasi sebelum pembayaran lunas."
-                );
+                Alert.alert("Pembayaran Belum Lunas", "Booking tidak bisa diselesaikan sebelum pembayaran lunas.");
                 return;
               }
-              updateStatus(item.id, "confirmed");
+              updateStatus(item.id, "completed");
             }}
             disabled={!isPaid}
-            className={`flex-1 px-4 py-3 rounded-xl ${
-              isPaid ? "bg-blue-600" : "bg-gray-300"
-            }`}
-            activeOpacity={isPaid ? 0.8 : 1}
+            className={`flex-row items-center justify-center py-4 rounded-2xl shadow-lg ${isPaid ? "bg-blue-600 shadow-blue-200" : "bg-slate-200"}`}
           >
-            <Text
-              className={`text-sm font-semibold text-center ${
-                isPaid ? "text-white" : "text-gray-500"
-              }`}
-            >
-              ✓ Konfirmasi
-            </Text>
+            <ClipboardCheck size={20} color={isPaid ? "white" : "#94a3b8"} />
+            <Text className={`font-bold ml-2 text-base ${isPaid ? "text-white" : "text-slate-400"}`}>Selesaikan Layanan</Text>
           </TouchableOpacity>
+        );
 
-          {/* BATALKAN (tetap boleh) */}
+      case "cancelled":
+        return (
           <TouchableOpacity
-            onPress={() => updateStatus(item.id, "cancelled")}
-            className="flex-1 bg-red-600 px-4 py-3 rounded-xl"
-            activeOpacity={0.8}
+            onPress={() => updateStatus(item.id, "pending")}
+            className="flex-row items-center justify-center bg-amber-50 border border-amber-200 py-4 rounded-2xl"
           >
-            <Text className="text-white text-sm font-semibold text-center">
-              ✕ Batalkan
-            </Text>
+            <RotateCcw size={18} color="#d97706" />
+            <Text className="text-amber-700 font-bold ml-2">Aktifkan Kembali</Text>
           </TouchableOpacity>
-        </View>
-      );
+        );
 
-    case "confirmed":
-      return (
-        <TouchableOpacity
-          onPress={() => {
-            if (!isPaid) {
-              Alert.alert(
-                "Pembayaran Belum Lunas",
-                "Booking tidak bisa diselesaikan sebelum pembayaran lunas."
-              );
-              return;
-            }
-            updateStatus(item.id, "completed");
-          }}
-          disabled={!isPaid}
-          className={`px-4 py-3 rounded-xl ${
-            isPaid ? "bg-blue-600" : "bg-gray-300"
-          }`}
-          activeOpacity={isPaid ? 0.8 : 1}
-        >
-          <Text
-            className={`text-sm font-semibold text-center ${
-              isPaid ? "text-white" : "text-gray-500"
-            }`}
-          >
-            ✔ Selesaikan
-          </Text>
-        </TouchableOpacity>
-      );
-
-    case "cancelled":
-      return (
-        <TouchableOpacity
-          onPress={() => updateStatus(item.id, "pending")}
-          className="bg-yellow-600 px-4 py-3 rounded-xl"
-          activeOpacity={0.8}
-        >
-          <Text className="text-white text-sm font-semibold text-center">
-            ↻ Aktifkan Kembali
-          </Text>
-        </TouchableOpacity>
-      );
-
-    default:
-      return null;
-  }
-};
-
-
-  const handleCall = async (booking_id) => {
-    const token = await AsyncStorage.getItem('authToken');
-    const res = await axios.get(`${API_URL}/api/call/${booking_id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    const tokenRoom = res.data.token;
-    navigation.navigate('Video-Call', { tokenRoom });
+      default:
+        return null;
+    }
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-slate-50">
+      <StatusBar barStyle="light-content" />
+      
       {/* HEADER */}
-      <View className="bg-blue-600 px-6 pt-12 pb-6">
-        <Text className="text-white text-sm font-medium opacity-90">Daftar Booking</Text>
-        <Text className="text-white text-3xl font-bold mt-1">On Site</Text>
+      <View className="bg-blue-600 px-6 pt-14 pb-10 rounded-b-[40px] shadow-lg">
+        <Text className="text-blue-100 text-xs font-bold uppercase tracking-widest">Manajemen Antrean</Text>
+        <Text className="text-white text-3xl font-extrabold mt-1">Booking On-Site</Text>
       </View>
 
       <ScrollView 
         className="flex-1 px-6"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563eb" />}
       >
-        <View className="py-4">
+        <View className="py-6">
           {/* STATS SUMMARY */}
-          <View className="flex-row mb-4 gap-3">
-            <View className="flex-1 bg-white rounded-xl p-4 shadow-sm">
-              <Text className="text-gray-500 text-xs font-medium">Total Booking</Text>
-              <Text className="text-gray-900 text-2xl font-bold mt-1">{data.length}</Text>
+          <View className="flex-row mb-6 gap-4">
+            <View className="flex-1 bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+              <View className="bg-blue-50 w-8 h-8 rounded-lg items-center justify-center mb-3">
+                <Hash size={16} color="#2563eb" />
+              </View>
+              <Text className="text-slate-400 text-[10px] font-bold uppercase">Total</Text>
+              <Text className="text-slate-900 text-2xl font-black">{data.length}</Text>
             </View>
-            <View className="flex-1 bg-white rounded-xl p-4 shadow-sm">
-              <Text className="text-gray-500 text-xs font-medium">Pending</Text>
-              <Text className="text-yellow-600 text-2xl font-bold mt-1">
+            <View className="flex-1 bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+              <View className="bg-amber-50 w-8 h-8 rounded-lg items-center justify-center mb-3">
+                <Clock size={16} color="#d97706" />
+              </View>
+              <Text className="text-slate-400 text-[10px] font-bold uppercase">Pending</Text>
+              <Text className="text-amber-600 text-2xl font-black">
                 {data.filter(d => d.status === 'pending').length}
               </Text>
             </View>
           </View>
 
           {loading && !refreshing && (
-            <View className="bg-white rounded-xl p-8 items-center shadow-sm">
-              <Text className="text-gray-500">Loading...</Text>
+            <View className="items-center py-10">
+              <ActivityIndicator color="#2563eb" />
+              <Text className="text-slate-400 mt-2 font-medium">Sinkronisasi data...</Text>
             </View>
           )}
 
@@ -272,69 +230,76 @@ export default function BookingOn() {
             const paymentInfo = paymentConfig[item.payment_status];
 
             return (
-              <View
-                key={item.id}
-                className="bg-white rounded-2xl p-5 mb-4 shadow-sm"
-              >
-                {/* HEADER CARD */}
-                <View className="flex-row justify-between items-start mb-4">
+              <View key={item.id} className="bg-white rounded-[32px] p-6 mb-5 shadow-sm border border-slate-100">
+                {/* TOP SECTION */}
+                <View className="flex-row justify-between items-start mb-5">
                   <View>
-                    <Text className="text-gray-900 text-lg font-bold">{item.booking_code}</Text>
-                    <Text className="text-gray-500 text-sm mt-1">
-                      {item.date} • {item.time_start}
-                    </Text>
+                    <View className="bg-slate-100 px-3 py-1 rounded-full self-start mb-2">
+                      <Text className="text-slate-600 text-[10px] font-bold">{item.booking_code}</Text>
+                    </View>
+                    <View className="flex-row items-center">
+                      <Calendar size={14} color="#64748b" />
+                      <Text className="text-slate-500 text-xs ml-1.5 font-medium">{item.date} • {item.time_start}</Text>
+                    </View>
                   </View>
                   <View className="items-end gap-2">
-                    <View className={`${statusInfo.bg} ${statusInfo.border} border px-3 py-1.5 rounded-lg flex-row items-center`}>
-                      <Text className="text-xs mr-1">{statusInfo.emoji}</Text>
-                      <Text className={`${statusInfo.text} text-xs font-semibold`}>
-                        {statusInfo.label}
-                      </Text>
+                    <View className={`${statusInfo.bg} ${statusInfo.border} border px-3 py-1.5 rounded-xl flex-row items-center`}>
+                      {statusInfo.icon}
+                      <Text className={`${statusInfo.text} text-[10px] font-bold ml-1.5`}>{statusInfo.label}</Text>
                     </View>
-                    <View className={`${paymentInfo.bg} ${paymentInfo.border} border px-3 py-1.5 rounded-lg flex-row items-center`}>
-                      <Text className="text-xs mr-1">{paymentInfo.emoji}</Text>
-                      <Text className={`${paymentInfo.text} text-xs font-semibold`}>
-                        {paymentInfo.label}
-                      </Text>
+                    <View className={`${paymentInfo.bg} ${paymentInfo.border} border px-3 py-1.5 rounded-xl flex-row items-center`}>
+                      {paymentInfo.icon}
+                      <Text className={`${paymentInfo.text} text-[10px] font-bold ml-1.5`}>{paymentInfo.label}</Text>
                     </View>
                   </View>
                 </View>
 
-                {/* PATIENT & SERVICE INFO */}
-                <View className="bg-gray-50 rounded-xl p-4 mb-4">
-                  <View className="mb-3">
-                    <Text className="text-gray-500 text-xs mb-1">Pasien</Text>
-                    <Text className="text-gray-900 font-semibold">{item.patient?.name}</Text>
+                {/* INFO CONTENT */}
+                <View className="bg-slate-50 rounded-2xl p-4 mb-6">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-10 h-10 bg-white rounded-xl items-center justify-center shadow-sm">
+                      <User size={20} color="#2563eb" />
+                    </View>
+                    <View className="ml-3">
+                      <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-tight">Nama Pasien</Text>
+                      <Text className="text-slate-900 font-bold text-base">{item.patient?.name}</Text>
+                    </View>
                   </View>
-                  <View className="mb-3">
-                    <Text className="text-gray-500 text-xs mb-1">Layanan</Text>
-                    <Text className="text-gray-900 font-semibold">{item.Service?.name}</Text>
-                  </View>
-                  <View>
-                    <Text className="text-gray-500 text-xs mb-1">Dokter</Text>
-                    <Text className="text-gray-900 font-semibold">{item.Doctor?.name || "-"}</Text>
+                  
+                  <View className="h-[1px] bg-slate-200 mb-4" />
+
+                  <View className="flex-row justify-between">
+                    <View className="flex-row items-center flex-1">
+                      <Stethoscope size={16} color="#64748b" />
+                      <Text className="text-slate-600 text-xs ml-2 font-semibold" numberOfLines={1}>{item.Service?.name}</Text>
+                    </View>
+                    <View className="flex-row items-center flex-1 justify-end">
+                      <View className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2" />
+                      <Text className="text-slate-500 text-xs font-medium" numberOfLines={1}>{item.Doctor?.name || "No Doctor"}</Text>
+                    </View>
                   </View>
                 </View>
 
-              
                 {/* ACTION BUTTONS */}
                 {renderActions(item)}
               </View>
             );
           })}
 
+          {/* EMPTY STATE */}
           {data.length === 0 && !loading && (
-            <View className="bg-white rounded-xl p-8 items-center shadow-sm">
-              <Text className="text-6xl mb-3">📋</Text>
-              <Text className="text-gray-900 font-bold text-lg">Belum Ada Booking</Text>
-              <Text className="text-gray-500 text-center mt-2">
-                Booking On site akan muncul di sini
+            <View className="bg-white rounded-[40px] p-12 items-center border border-dashed border-slate-200 mt-4">
+              <View className="bg-slate-50 p-6 rounded-full mb-6">
+                <ClipboardCheck size={48} color="#cbd5e1" />
+              </View>
+              <Text className="text-slate-900 font-black text-xl text-center">Belum Ada Antrean</Text>
+              <Text className="text-slate-400 text-center mt-2 leading-5 px-4 font-medium">
+                Semua jadwal kunjungan pasien di tempat akan muncul di sini secara otomatis.
               </Text>
             </View>
           )}
         </View>
-
-        <View className="h-6" />
+        <View className="h-10" />
       </ScrollView>
     </View>
   );

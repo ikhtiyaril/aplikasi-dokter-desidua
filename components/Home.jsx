@@ -24,6 +24,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  CloudCogIcon
 } from 'lucide-react-native';
 
 export default function Home() {
@@ -91,12 +92,20 @@ export default function Home() {
       bgColor: '#fee2e2'
     },
     { 
+      title: 'Atur Konsultasi', 
+      screen: 'Ekslusive', 
+      icon: CloudCogIcon,
+      color: '#6b7280',
+      bgColor: '#f3f4f6'
+    },
+    { 
       title: 'Block Waktu', 
       screen: 'Blocked-Time', 
       icon: Clock,
       color: '#6b7280',
       bgColor: '#f3f4f6'
     },
+    
   ];
 
   /* ================= FETCH DOCTOR ================= */
