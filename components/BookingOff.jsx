@@ -87,6 +87,8 @@ export default function BookingOn() {
       });
       const responses = res.data.data;
       const dataFilter = responses.filter(s => s.Service.is_live === false);
+      console.log("DATA FILTER : ")
+      console.log(dataFilter)
       setData(dataFilter);
     } catch (err) {
       console.error(err);
@@ -262,7 +264,7 @@ export default function BookingOn() {
                     </View>
                     <View className="ml-3">
                       <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-tight">Nama Pasien</Text>
-                      <Text className="text-slate-900 font-bold text-base">{item.patient?.name}</Text>
+                      <Text className="text-slate-900 font-bold text-base">{item.User?.name}</Text>
                     </View>
                   </View>
                   

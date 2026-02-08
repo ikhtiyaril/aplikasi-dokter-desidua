@@ -265,7 +265,7 @@ export default function BookingVideoCall() {
                     </View>
                     <View className="ml-3">
                       <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-tight">Pasien</Text>
-                      <Text className="text-slate-900 font-bold text-base">{item.patient?.name}</Text>
+                      <Text className="text-slate-900 font-bold text-base">{item.User?.name}</Text>
                     </View>
                   </View>
                   

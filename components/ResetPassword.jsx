@@ -10,6 +10,7 @@ import {
 import axios from "axios";
 import { API_URL } from "@env";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Lock,
   Mail,
@@ -22,10 +23,15 @@ import {
 
 export default function ResetPassword() {
   const navigation = useNavigation();
-  
+
+  // form state
   const [email, setEmail] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // show/hide toggles
+  const [showOldPassword, setShowOldPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -45,7 +51,8 @@ export default function ResetPassword() {
   };
 
   const handleResetPassword = async () => {
-    if (!email || !password || !confirmPassword) {
+    // client-side validation
+    if (!email || !oldPassword || !password || !confirmPassword) {
       return Alert.alert("Error", "Semua field wajib diisi");
     }
 
@@ -53,37 +60,64 @@ export default function ResetPassword() {
       return Alert.alert("Error", "Password tidak sama");
     }
 
+    if (password.length < 6) {
+      return Alert.alert("Error", "Password minimal 6 karakter");
+    }
+
     if (parseInt(captchaAnswer) !== num1 + num2) {
       return Alert.alert("Verifikasi Gagal", "Jawaban captcha salah");
     }
 
     try {
-      const res = await axios.post(`${API_URL}/api/doctor/reset-password`, {
-        email,
-        password,
+      // ambil token dari storage (verifyToken middleware membutuhkan header Authorization)
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) {
+        Alert.alert(
+          "Autentikasi Diperlukan",
+          "Silakan login terlebih dahulu untuk mengganti password",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.navigate("Login"),
+            },
+          ]
+        );
+        return;
+      }
+
+      // request ke endpoint yang memakai verifyToken
+      const payload = {
+        old_password: oldPassword,
+        new_password: password,
+      };
+
+      const res = await axios.post(`${API_URL}/api/doctor/reset-password`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      Alert.alert(
-        "Berhasil!",
-        "Password Anda telah berhasil diubah",
-        [
-          {
-            text: "OK",
-            onPress: () => navigation.navigate("Home"),
-          },
-        ]
-      );
-      
+      Alert.alert("Berhasil!", "Password Anda telah berhasil diubah", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("Home"),
+        },
+      ]);
+
       // Reset form
       setEmail("");
+      setOldPassword("");
       setPassword("");
       setConfirmPassword("");
       generateCaptcha();
     } catch (err) {
-      Alert.alert(
-        "Gagal",
-        err.response?.data?.message || "Terjadi kesalahan"
-      );
+      console.error("Reset password error:", err.response || err.message || err);
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Terjadi kesalahan";
+      Alert.alert("Gagal", message);
     }
   };
 
@@ -143,6 +177,36 @@ export default function ResetPassword() {
           </View>
         </View>
 
+        {/* OLD PASSWORD INPUT (NEW) */}
+        <View className="mb-5">
+          <View className="flex-row items-center mb-2">
+            <View className="bg-blue-100 p-1.5 rounded-lg mr-2">
+              <KeyRound size={16} color="#2563eb" strokeWidth={2} />
+            </View>
+            <Text className="text-gray-800 font-semibold text-sm">
+              Password Lama
+            </Text>
+          </View>
+          <View className="bg-white border-2 border-blue-200 rounded-2xl flex-row items-center px-4 py-1">
+            <Lock size={20} color="#94a3b8" strokeWidth={2} />
+            <TextInput
+              className="flex-1 ml-3 text-gray-800 py-3"
+              placeholder="Masukkan password lama"
+              placeholderTextColor="#94a3b8"
+              secureTextEntry={!showOldPassword}
+              value={oldPassword}
+              onChangeText={setOldPassword}
+            />
+            <TouchableOpacity onPress={() => setShowOldPassword(!showOldPassword)}>
+              {showOldPassword ? (
+                <EyeOff size={20} color="#94a3b8" strokeWidth={2} />
+              ) : (
+                <Eye size={20} color="#94a3b8" strokeWidth={2} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* PASSWORD INPUT */}
         <View className="mb-5">
           <View className="flex-row items-center mb-2">
@@ -157,7 +221,7 @@ export default function ResetPassword() {
             <Lock size={20} color="#94a3b8" strokeWidth={2} />
             <TextInput
               className="flex-1 ml-3 text-gray-800 py-3"
-              placeholder="Minimal 8 karakter"
+              placeholder="Minimal 6 karakter"
               placeholderTextColor="#94a3b8"
               secureTextEntry={!showPassword}
               value={password}

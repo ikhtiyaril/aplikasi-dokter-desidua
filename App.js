@@ -19,6 +19,7 @@ import MedicalRecordScreen from './Screen/MedicalRecordScreen';
 import GeneralScreen from './Screen/GeneralScreen';
 import ResetPasswordScreen from './Screen/ResetPasswordScreen';
 import ExsclusiveScreenPages from './Screen/ExsclusiveScreenPages';
+import NotificationScreen from './Screen/NotificationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +44,8 @@ export default function App() {
 <Stack.Screen name="Reset-Password" component={ResetPasswordScreen}/>
 <Stack.Screen name="Settings" component={GeneralScreen}/>
 <Stack.Screen name="Ekslusive" component={ExsclusiveScreenPages}/>
+<Stack.Screen name="Notification" component={NotificationScreen}/>
+
 
 
 

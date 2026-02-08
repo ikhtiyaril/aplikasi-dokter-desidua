@@ -9,6 +9,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Image
 } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -44,7 +50,10 @@ export default function DoctorWalletScreen() {
     bank_account: "",
     account_name: "",
   });
+const [proofModalVisible, setProofModalVisible] = useState(false);
+const [selectedProof, setSelectedProof] = useState(null);
 
+const BACKEND = `https://backend.desidua.cloud/`
   // ===============================
   // FETCH WALLET + INCOME
   // ===============================
@@ -350,16 +359,22 @@ export default function DoctorWalletScreen() {
                   </View>
                 </View>
 
-                {item.proof_image && (
-                  <View className="mt-3 flex-row items-center bg-green-50 p-2 rounded-lg">
-                    <View className="bg-green-200 p-1 rounded-full">
-                      <Info size={14} color="#15803d" />
-                    </View>
-                    <Text className="text-xs text-green-700 ml-2 font-medium">
-                      Bukti transfer tersedia
-                    </Text>
-                  </View>
-                )}
+               {item.status === "paid" && item.proof_image && (
+  <TouchableOpacity 
+    onPress={() => {
+      setSelectedProof(item.proof_image);
+      console.log("Gambarnya")
+      console.log(item.proof_image)
+      setProofModalVisible(true);
+    }}
+    className="mt-3 flex-row items-center bg-blue-600 p-3 rounded-xl justify-center shadow-sm"
+  >
+    <Info size={16} color="#ffffff" />
+    <Text className="text-xs text-white ml-2 font-bold">
+      Lihat Bukti Pembayaran
+    </Text>
+  </TouchableOpacity>
+)}
               </View>
             )}
             ListEmptyComponent={
@@ -434,92 +449,147 @@ export default function DoctorWalletScreen() {
       {/* ===============================
           MODAL WITHDRAW - BLUE THEME
       =============================== */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6">
-            <View className="flex-row items-center mb-5">
-              <View className="bg-blue-100 p-2 rounded-full mr-3">
-                <ArrowDownToLine size={24} color="#2563eb" />
-              </View>
-              <Text className="font-bold text-xl text-gray-800">
-                Request Withdraw
-              </Text>
+    <Modal visible={modalVisible} transparent animationType="slide">
+      {/* 1. TouchableWithoutFeedback agar keyboard tertutup saat klik di luar area input */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View className="flex-1 bg-black/50 justify-end mb-60">
+          
+          {/* 2. KeyboardAvoidingView dengan behavior yang tepat */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          >
+            <View className="bg-white rounded-t-[32px] p-6 pb-10">
+              {/* Handle bar untuk estetika bottom sheet */}
+              <View className="w-12 h-1 bg-gray-200 rounded-full self-center mb-6" />
+
+              {/* 3. Gunakan ScrollView agar jika layar kecil, input tetap bisa diakses */}
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {/* HEADER */}
+                <View className="flex-row items-center mb-6">
+                  <View className="bg-blue-100 p-2.5 rounded-2xl mr-4">
+                    <ArrowDownToLine size={24} color="#2563eb" />
+                  </View>
+                  <View>
+                    <Text className="font-bold text-xl text-gray-900">Request Withdraw</Text>
+                    <Text className="text-gray-500 text-xs">Pastikan data rekening sudah benar</Text>
+                  </View>
+                </View>
+
+                {/* FORM JUMLAH */}
+                <View className="mb-4">
+                  <View className="flex-row items-center mb-2 ml-1">
+                    <DollarSign size={16} color="#6b7280" />
+                    <Text className="text-gray-600 font-semibold ml-2">Jumlah</Text>
+                  </View>
+                  <TextInput
+                    placeholder="Contoh: 50000"
+                    value={form.amount}
+                    keyboardType="numeric"
+                    onChangeText={(v) => setForm({ ...form, amount: v })}
+                    className="border border-blue-100 rounded-2xl px-4 py-4 bg-slate-50 text-gray-800 font-medium focus:border-blue-500"
+                  />
+                </View>
+
+                {/* BANK */}
+                <View className="mb-4">
+                  <View className="flex-row items-center mb-2 ml-1">
+                    <Building2 size={16} color="#6b7280" />
+                    <Text className="text-gray-600 font-semibold ml-2">Nama Bank</Text>
+                  </View>
+                  <TextInput
+                    placeholder="Contoh: BCA, Mandiri, BNI"
+                    value={form.bank_name}
+                    onChangeText={(v) => setForm({ ...form, bank_name: v })}
+                    className="border border-blue-100 rounded-2xl px-4 py-4 bg-slate-50 text-gray-800 font-medium focus:border-blue-500"
+                  />
+                </View>
+
+                {/* REKENING */}
+                <View className="mb-4">
+                  <View className="flex-row items-center mb-2 ml-1">
+                    <CreditCard size={16} color="#6b7280" />
+                    <Text className="text-gray-600 font-semibold ml-2">Nomor Rekening</Text>
+                  </View>
+                  <TextInput
+                    placeholder="Masukkan nomor rekening"
+                    value={form.bank_account}
+                    keyboardType="numeric"
+                    onChangeText={(v) => setForm({ ...form, bank_account: v })}
+                    className="border border-blue-100 rounded-2xl px-4 py-4 bg-slate-50 text-gray-800 font-medium focus:border-blue-500"
+                  />
+                </View>
+
+                {/* NAMA PEMILIK */}
+                <View className="mb-8">
+                  <View className="flex-row items-center mb-2 ml-1">
+                    <User size={16} color="#6b7280" />
+                    <Text className="text-gray-600 font-semibold ml-2">Nama Pemilik Rekening</Text>
+                  </View>
+                  <TextInput
+                    placeholder="Masukkan nama pemilik"
+                    value={form.account_name}
+                    onChangeText={(v) => setForm({ ...form, account_name: v })}
+                    className="border border-blue-100 rounded-2xl px-4 py-4 bg-slate-50 text-gray-800 font-medium focus:border-blue-500"
+                  />
+                </View>
+
+                {/* BUTTONS */}
+                <TouchableOpacity
+                  onPress={submitWithdraw}
+                  activeOpacity={0.8}
+                  className="bg-blue-600 py-4 rounded-2xl shadow-lg shadow-blue-300"
+                >
+                  <Text className="text-white text-center font-bold text-lg">
+                    Kirim Request
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  onPress={() => setModalVisible(false)} 
+                  className="mt-4 py-2"
+                >
+                  <Text className="text-center text-gray-400 font-bold">
+                    Batal
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-
-            <View className="mb-4">
-              <View className="flex-row items-center mb-2">
-                <DollarSign size={18} color="#6b7280" />
-                <Text className="text-gray-700 font-medium ml-2">Jumlah</Text>
-              </View>
-              <TextInput
-                placeholder="Masukkan jumlah withdraw"
-                value={form.amount}
-                keyboardType="numeric"
-                onChangeText={(v) => setForm({ ...form, amount: v })}
-                className="border border-blue-200 rounded-xl px-4 py-3.5 bg-blue-50"
-              />
-            </View>
-
-            <View className="mb-4">
-              <View className="flex-row items-center mb-2">
-                <Building2 size={18} color="#6b7280" />
-                <Text className="text-gray-700 font-medium ml-2">Nama Bank</Text>
-              </View>
-              <TextInput
-                placeholder="Contoh: BCA, Mandiri, BNI"
-                value={form.bank_name}
-                onChangeText={(v) => setForm({ ...form, bank_name: v })}
-                className="border border-blue-200 rounded-xl px-4 py-3.5 bg-blue-50"
-              />
-            </View>
-
-            <View className="mb-4">
-              <View className="flex-row items-center mb-2">
-                <CreditCard size={18} color="#6b7280" />
-                <Text className="text-gray-700 font-medium ml-2">Nomor Rekening</Text>
-              </View>
-              <TextInput
-                placeholder="Masukkan nomor rekening"
-                value={form.bank_account}
-                keyboardType="numeric"
-                onChangeText={(v) => setForm({ ...form, bank_account: v })}
-                className="border border-blue-200 rounded-xl px-4 py-3.5 bg-blue-50"
-              />
-            </View>
-
-            <View className="mb-5">
-              <View className="flex-row items-center mb-2">
-                <User size={18} color="#6b7280" />
-                <Text className="text-gray-700 font-medium ml-2">Nama Pemilik Rekening</Text>
-              </View>
-              <TextInput
-                placeholder="Masukkan nama pemilik rekening"
-                value={form.account_name}
-                onChangeText={(v) => setForm({ ...form, account_name: v })}
-                className="border border-blue-200 rounded-xl px-4 py-3.5 bg-blue-50"
-              />
-            </View>
-
-            <TouchableOpacity
-              onPress={submitWithdraw}
-              className="bg-blue-600 py-4 rounded-xl shadow-md mb-3"
-            >
-              <Text className="text-white text-center font-bold text-base">
-                Kirim Request
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              className="py-3"
-            >
-              <Text className="text-center text-gray-500 font-medium">
-                Batal
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </KeyboardAvoidingView>
         </View>
-      </Modal>
+      </TouchableWithoutFeedback>
+    </Modal>
+
+<Modal
+  visible={proofModalVisible}
+  transparent={true}
+  animationType="fade"
+  onRequestClose={() => setProofModalVisible(false)}
+>
+  <View className="flex-1 bg-black/90 justify-center items-center p-4">
+    <TouchableOpacity 
+      onPress={() => setProofModalVisible(false)}
+      className="absolute top-12 right-6 z-10 bg-white/20 p-2 rounded-full"
+    >
+      <X size={28} color="#ffffff" />
+    </TouchableOpacity>
+    
+    {selectedProof && (
+      <View className="w-full h-3/4 bg-white rounded-2xl overflow-hidden">
+        <Image 
+          source={{ uri: selectedProof }} 
+          className="w-full h-full"
+          resizeMode="contain"
+        />
+      </View>
+    )}
+    
+    <Text className="text-white mt-4 font-medium text-base">Bukti Transfer</Text>
+  </View>
+</Modal>
 
     </View>
   );
